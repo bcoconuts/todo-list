@@ -107,9 +107,14 @@ def route_choice(todo_dict: dict[int, dict[str, str]], choice: int) -> bool:
 
 
 def add_item(todo_dict: dict[int, dict[str, str]]) -> None:
-    new_task_number = len(todo_dict) + 1
-    new_task = input("\nName the task you would like to add: ").strip()
+    while True:
+        new_task = input("\nName the task you would like to add: ").strip()
+        if new_task:
+            break
+        print("\nInvalid Input. Task name cannot be empty.")
 
+    new_task_number = len(todo_dict) + 1
+    
     todo_dict[new_task_number] = {}
     todo_dict[new_task_number][NAME] = new_task
     todo_dict[new_task_number][STATUS] = INCOMPLETE
