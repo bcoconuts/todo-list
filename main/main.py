@@ -2,6 +2,8 @@
 Generate and maintain a ToDo List using the CLI
 '''
 
+import json
+
 
 # =========================
 # CONFIG
@@ -10,6 +12,7 @@ Generate and maintain a ToDo List using the CLI
 ADD_TASK = "Add Task"
 REMOVE_TASK = "Remove Task"
 VIEW_TASKS = "View Tasks"
+EDIT_TASK_STATUS = "Edit Status of Task"
 EXIT = "Exit"
 TASK_NUMBER = "Task Number"
 NAME = "Name"
@@ -18,7 +21,11 @@ COMPLETE = "Complete"
 INCOMPLETE = "Incomplete"
 IN_PROGRESS = "In Progress"
 REJECTED = "Rejected"
-CHOICES = {1: ADD_TASK, 2: REMOVE_TASK, 3: VIEW_TASKS, 4: EXIT}
+YES = "Yes"
+NO = "No"
+Y_N_CHOICES = {1: YES, 2: NO}
+CHOICES = {1: ADD_TASK, 2: REMOVE_TASK, 3: VIEW_TASKS, 4: EDIT_TASK_STATUS, 5: EXIT}
+STATUSES = {1: COMPLETE, 2: INCOMPLETE, 3: IN_PROGRESS}
 
 
 # =========================
@@ -62,27 +69,42 @@ def display_options_from_dict(header: str, target_dict: dict[int, str]) -> None:
 # LOGIC
 # =========================
 
-def get_user_choice() -> int:
-    display_options_from_dict("\nOPTIONS:", CHOICES)
-
+def get_user_choice(todo_dict: dict[int, dict[str, str]]) -> int:
+    list_length = len(todo_dict)
+    header = "\nOPTIONS:"
     prompt = "What would you like to do?: "
-    choice = get_key_number_choice_from_dict(prompt, CHOICES)
 
+    if list_length >= 1:
+        display_options_from_dict(header, CHOICES)
+        choice = get_key_number_choice_from_dict(prompt, CHOICES)
+    else:
+        valid_choices = [_ for _ in CHOICES.values() if _ != EDIT_TASK_STATUS]
+        valid_choice_dict = {i + 1: v for i, v in enumerate(valid_choices)}
+        display_options_from_dict(header, valid_choice_dict)
+        choice = get_key_number_choice_from_dict(prompt, valid_choice_dict)
+    
     return choice
 
 
-def route_choice(todo_dict: dict[int, dict[str, str]], choice: int) -> None | bool:
+def route_choice(todo_dict: dict[int, dict[str, str]], choice: int) -> bool:
     current_choice = CHOICES[choice]
     if current_choice == ADD_TASK:
         add_item(todo_dict)
         view_items(todo_dict)
+        return True
     elif current_choice == REMOVE_TASK:
         remove_item(todo_dict)
         view_items(todo_dict)
+        return True
     elif current_choice == VIEW_TASKS:
         view_items(todo_dict)
-    else:
         return True
+    elif current_choice == EDIT_TASK_STATUS:
+        edit_item_status(todo_dict)
+        view_items(todo_dict)
+        return True
+    else:
+        return False
 
 
 def add_item(todo_dict: dict[int, dict[str, str]]) -> None:
@@ -97,7 +119,10 @@ def add_item(todo_dict: dict[int, dict[str, str]]) -> None:
 def remove_item(todo_dict: dict[int, dict[str, str]]) -> None:
     prompt = "\nWhich task would you like to remove?: "
     task_number = get_key_number_choice_from_dict(prompt, todo_dict)
+    update_todo_list(todo_dict, task_number)
 
+
+def update_todo_list(todo_dict: dict[int, dict[str, str]], task_number: int) -> None:
     todo_dict.pop(task_number)
     new_dict = {i + 1: v for i, v in enumerate(todo_dict.values())}
     todo_dict.clear()
@@ -105,11 +130,40 @@ def remove_item(todo_dict: dict[int, dict[str, str]]) -> None:
 
 
 def view_items(todo_dict: dict[int, dict[str, str]]) -> None:
-    print("\nLIST:")
-    for k in todo_dict:
-        task = todo_dict[k][NAME]
-        status = todo_dict[k][STATUS]
-        print(f"    {k}. {task} -- Status: {status}")
+    list_length = len(todo_dict)
+
+    if 1 <= list_length:
+        print("\nLIST:")
+        for k in todo_dict:
+            task = todo_dict[k][NAME]
+            status = todo_dict[k][STATUS]
+            print(f"    {k}. {task} -- Status: {status}")
+    else:
+        print("\nLIST:\n    EMPTY")
+
+
+def edit_item_status(todo_dict: dict[int, dict[str, str]]) -> None:
+    task_prompt = "\nWhich task would you like to edit the status of?: "
+    task_number = get_key_number_choice_from_dict(task_prompt, todo_dict)
+    
+    header = "\nSTATUS TYPES:"
+    display_options_from_dict(header, STATUSES)
+
+    status_prompt = "\nWhat would you like the status to be?: "
+    status_number = get_key_number_choice_from_dict(status_prompt, STATUSES)
+    todo_dict[task_number][STATUS] = STATUSES[status_number]
+
+    status = STATUSES[status_number]
+    if status == COMPLETE:
+        header = "\nY/N:"
+        display_options_from_dict(header, Y_N_CHOICES)
+
+        deletion_prompt = "\nStatus marked as complete. Would you like to delete?:"
+        deletion_number = get_key_number_choice_from_dict(deletion_prompt, Y_N_CHOICES)
+
+        if Y_N_CHOICES[deletion_number] == YES:
+            update_todo_list(todo_dict, task_number)
+        
 
 
 # =========================
@@ -117,22 +171,13 @@ def view_items(todo_dict: dict[int, dict[str, str]]) -> None:
 # =========================
 
 def main():
-    todo_dict = sample_dict
-    exited = False
-    while not exited:
-        choice = get_user_choice()
-        exited = route_choice(todo_dict, choice)
+    todo_dict = {}
+    view_items(todo_dict)
+    running = True
+    while running:
+        choice = get_user_choice(todo_dict)
+        running = route_choice(todo_dict, choice)
 
-
-# =========================
-# TESTING
-# =========================
-
-sample_dict = {
-    1: {NAME: "Laundry", STATUS: INCOMPLETE},
-    2: {NAME: "Bills", STATUS: COMPLETE},
-    3: {NAME: "Coding", STATUS: IN_PROGRESS},
-}
 
 if __name__ == "__main__":
     main()
